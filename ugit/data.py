@@ -7,6 +7,16 @@ def init():
     os.mkdir(UGIT_DIR)
     os.makedirs(f'{UGIT_DIR}/objects')
 
+def set_HEAD(oid):
+    with open (f'{UGIT_DIR}/HEAD', 'w') as f:
+        f.write (oid)
+
+def get_HEAD():
+    if os.path.isfile (f'{UGIT_DIR}/HEAD'):
+        with open (f'{UGIT_DIR}/HEAD') as f:
+            return f.read ().strip ()
+
+
 def hash_object(data, type_= "blob"):
     obj = type_.encode() + b"\x00" + data
     oid = hashlib.sha1(obj).hexdigest() # oid - Object ID

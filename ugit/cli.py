@@ -29,6 +29,14 @@ def parse_args():
     write_tree_parser = commands.add_parser("write-tree")
     write_tree_parser.set_defaults(func=write_tree)
 
+    read_tree_parser = commands.add_parser("read-tree")
+    read_tree_parser.set_defaults(func=read_tree)
+    read_tree_parser.add_argument("tree")
+
+    commit_parser = commands.add_parser("commit")
+    commit_parser.set_defaults(func=commit)
+    commit_parser.add_argument("-m", "--message", required=True)
+
     return parser.parse_args()
 
 def init(args):
@@ -45,3 +53,9 @@ def cat_file(args):
 
 def write_tree(args):
     print(base.write_tree())
+
+def read_tree(args):
+    base.read_tree(args.tree)
+
+def commit(args):
+    print(base.commit(args.message))
