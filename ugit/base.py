@@ -1,6 +1,7 @@
 import itertools
 import operator
 import os
+import string
 
 from collections import namedtuple
 
@@ -59,29 +60,23 @@ def get_tree(oid, base_path=""):
             assert False, f"Unknown tree entry {type_}"
     return result
 
-def _empty_current_directory():
-    for root, dirnames, filenames in os.walk(".", topdown=False):
+def _empty_current_directory ():
+    for root, dirnames, filenames in os.walk ('.', topdown=False):
         for filename in filenames:
-            path = os.path.relpath(f"{root}/{filename}")
-            if is_ignored(path) or not os.path.isfile(path):
+            path = os.path.relpath(f"{root}/{filename}").replace(os.sep, "/")
+            if is_ignored (path) or not os.path.isfile (path):
                 continue
-    def _empty_current_directory():
-        for root, dirnames, filenames in os.walk(".", topdown=False):
-            for filename in filenames:
-                path = os.path.relpath(f"{root}/{filename}")
-                if is_ignored(path or not os.path.isfile(path)):
-                    continue
-                os.remove(path)
-            for dirname in dirnames:
-                path = os.path.relpath(f"{root}/{dirname}")
-                if is_ignored(path):
-                    continue
-                try:
-                    os.rmdir(path)
-                except(FileExistsError, OSError):
-                    # Deletion might fail if the directory contains ignored files,
-                    # so it's Opass
-                    pass
+            os.remove (path)
+        for dirname in dirnames:
+            path = os.path.relpath (f'{root}/{dirname}')
+            if is_ignored (path):
+                continue
+            try:
+                os.rmdir (path)
+            except (FileNotFoundError, OSError):
+                # Deletion might fail if the directory contains ignored files,
+                # so it's OK
+                pass
 
 def read_tree(tree_oid):
     _empty_current_directory()
@@ -92,7 +87,7 @@ def read_tree(tree_oid):
 
 def commit(message):
     commit = f"tree {write_tree()}\n"
-    HEAD = data.get_HEAD()
+    HEAD = data.get_ref("HEAD")
     if HEAD:
         commit += f'parent {HEAD}\n'
 
@@ -101,14 +96,14 @@ def commit(message):
 
     oid = data.hash_object(commit.encode(), "commit")
 
-    data.set_HEAD(oid)
+    data.update_ref("HEAD" ,oid)
 
     return oid
 
 def checkout(oid):
     commit = get_commit(oid)
     read_tree(commit.tree)
-    data.set_HEAD(oid)
+    data.update_ref("HEAD", oid)
 
 
 Commit = namedtuple("commit", ["tree", "parent", "message"])
@@ -129,6 +124,29 @@ def get_commit(oid):
 
     message = "\n".join(lines)
     return Commit(tree=tree, parent=parent, message=message)
+
+def create_tag(name, oid):
+    data.update_ref(f"refs/tags/{name}", oid)
+
+def get_oid(name):
+
+    if name =="@" : name = "HEAD"
+
+    refs_to_try = [
+        f"{name}",
+        f"refs/{name}",
+        f"refs/tags/{name}",
+        f"refs/heads/{name}"
+    ]
+    for ref in refs_to_try:
+        if data.get_ref(ref):
+            return data.get_ref(ref)
+
+    is_hex = all(c in string.hexdigits for c in name)
+    if len(name) == 40 and is_hex:
+        return name
+
+    assert False, f"Unknown name {name}"
 
 def is_ignored(path):
     return ".ugit" in path.split("/")
